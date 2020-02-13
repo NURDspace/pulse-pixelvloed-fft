@@ -42,7 +42,7 @@ uint8_t peakHold[COLS];
 long long peakHoldTime[COLS];
 
 struct sigaction old_sigint;
-bool run;
+volatile bool run;
 
 int framesPerSecond = 10;
 double upperFrequency = 3520.0; // A7
