@@ -14,6 +14,7 @@
 #define PI 3.14159265358979323846264338327f
 
 //gcc test2.c -o test3 -lm -lpulse -lpulse-simple -lfftw3
+//Tnx to https://gitlab.com/nitroxis/pasa/ for providing a good example of how to do this
 
 #define COLS 128 
 #define LINES 64 
