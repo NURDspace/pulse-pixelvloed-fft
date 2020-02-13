@@ -15,9 +15,7 @@
 #include <sys/time.h>
 #include <systemd/sd-daemon.h>
 
-#define PI 3.14159265358979323846264338327f
-
-//gcc test2.c -o test3 -lm -lpulse -lpulse-simple -lfftw3
+//gcc -Ofast test2.c -o test3 -lm -lpulse -lpulse-simple -lfftw3
 //Tnx to https://gitlab.com/nitroxis/pasa/ for providing a good example of how to do this
 
 #define COLS 128 
@@ -75,9 +73,9 @@ void onSigInt()
 }
 
 // hanning window.
-float windowFunction(int n, int N)
+double windowFunction(int n, int N)
 {
-    return 0.5f * (1.0f - cosf(2.0f * PI * n / (N - 1.0f)));
+    return 0.5 * (1.0 - cosf(2.0 * M_PI * n / (N - 1.0)));
 }
 
 void printUsage()
