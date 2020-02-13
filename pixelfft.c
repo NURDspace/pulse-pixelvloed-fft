@@ -13,6 +13,7 @@
 #include <netinet/in.h>
 #include <time.h>
 #include <sys/time.h>
+#include <systemd/sd-daemon.h>
 
 #define PI 3.14159265358979323846264338327f
 
@@ -207,6 +208,8 @@ int main(int argc, char* argv[])
     struct Packet myPacket;
     myPacket.header = 0;
 
+    sd_notify(0, "READY=1");
+
     // record loop
     while(run)
     {
@@ -245,7 +248,7 @@ int main(int argc, char* argv[])
                 peakHold[i] = barHeight;
             }
             for(int x = 0; x < 16; x++){
-                myPacket.pixel[x].y = (uint16_t)(COLS /2) - i;
+                myPacket.pixel[x].y = (uint16_t)(COLS / 2) - i;
                 myPacket.pixel[x].x = (uint16_t)x + 16;
                 if (x >= barHeight) {
                     myPacket.pixel[x].r = rPixel[x];
@@ -258,7 +261,7 @@ int main(int argc, char* argv[])
                     myPacket.pixel[x].g = 0;
                     myPacket.pixel[x].b = 0; 
                 }
-                if (x == peakHold[i] && x > 1 ) {
+                if (x == peakHold[i]) {
                     myPacket.pixel[x].r = 255;
                     myPacket.pixel[x].g = 0;
                     myPacket.pixel[x].b = 0;
@@ -292,7 +295,7 @@ int main(int argc, char* argv[])
                     myPacket.pixel[x].g = 0;
                     myPacket.pixel[x].b = 0; 
                 }
-                if (x == peakHold[i] && x > 1 ) {
+                if (x == peakHold[i]) {
                     myPacket.pixel[x].r = 255;
                     myPacket.pixel[x].g = 0;
                     myPacket.pixel[x].b = 0;
