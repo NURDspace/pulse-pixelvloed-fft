@@ -9,6 +9,7 @@
 #include <pulse/simple.h>
 #include <pulse/error.h>
 #include <fftw3.h>
+#include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <time.h>
@@ -35,26 +36,25 @@ struct Packet {
     struct Pixel pixel[16];
 } packet;
 
-#define peakHoldTimeout 500
+#define peakHoldTimeout 500 
 uint8_t peakHold[COLS];
 long long peakHoldTime[COLS];
 
 struct sigaction old_sigint;
 volatile bool run;
 
-int framesPerSecond = 10;
+int framesPerSecond = 25;
 double upperFrequency = 3520.0; // A7
 double gain = 15.0;
 
-int gPixel[16] = {0,17,34,51,68,85,102,119,136,153,170,187,204,221,238,255};
-int rPixel[16] = {255,238,221,204,187,170,153,136,119,102,85,68,51,34,17,0};
-int bPixel[16] = {0,1,1,2,3,4,4,5,6,7,7,8,9,10,10,11};
+int gPixel[16] = {0,0,0,0,17,34,51,68,85,102,119,136,153,170,187,204};
+int rPixel[16] = {255,255,255,255,238,221,204,187,170,153,136,119,102,85,68,51};
+int bPixel[16] = {0,0,0,0,1,1,2,3,4,4,5,6,7,7,8,9};
 
 long long current_timestamp() {
     struct timeval te; 
     gettimeofday(&te, NULL); // get current time
     long long milliseconds = te.tv_sec*1000LL + te.tv_usec/1000; // calculate milliseconds
-    // printf("milliseconds: %lld\n", milliseconds);
     return milliseconds;
 }
 
@@ -65,10 +65,7 @@ long map(long x, long in_min, long in_max, long out_min, long out_max)
 
 void onSigInt()
 {
-    // reset SIGINT.
     sigaction(SIGINT, &old_sigint, NULL);
-
-    // tell main loop to exit.
     run = false;
 }
 
@@ -230,7 +227,9 @@ int main(int argc, char* argv[])
         calculateBars(out, size, barsL, COLS / 2);
 
         // right input.
-        for (int i = 0; i < size; i++) in[i] = (double)(window[i] * buffer[i * 2 + 1]);
+        for (int i = 0; i < size; i++) {
+            in[i] = (double)(window[i] * buffer[i * 2 + 1]);
+        }
         fftw_execute(plan);
         calculateBars(out, size, barsR, COLS / 2);
 
@@ -243,10 +242,11 @@ int main(int argc, char* argv[])
                 peakHoldTime[i] = current_timestamp();
             }
             if ((current_timestamp() - peakHoldTime[i]) > peakHoldTimeout) {
-                peakHold[i] = barHeight;
+                peakHold[i] = peakHold[i] + 1;
+                peakHoldTime[i] = current_timestamp() - (long long)250;
             }
             for(int x = 0; x < 16; x++){
-                myPacket.pixel[x].y = (uint16_t)(COLS / 2) - i;
+                myPacket.pixel[x].y = (uint16_t)(COLS / 2) - i - 1;
                 myPacket.pixel[x].x = (uint16_t)x + 16;
                 if (x >= barHeight) {
                     myPacket.pixel[x].r = rPixel[x];
@@ -260,7 +260,7 @@ int main(int argc, char* argv[])
                     myPacket.pixel[x].b = 0; 
                 }
                 if (x == peakHold[i]) {
-                    myPacket.pixel[x].r = 255;
+                    myPacket.pixel[x].r = 128;
                     myPacket.pixel[x].g = 0;
                     myPacket.pixel[x].b = 0;
                 }
@@ -271,13 +271,15 @@ int main(int argc, char* argv[])
         // draw right.
         for(int i = 0; i < COLS / 2; i++)
         {
-            barHeight = (int)map((int)barsR[i], 0, LINES, 16, 0);
-            if (barHeight <= peakHold[i]) {
-                peakHold[i] = barHeight;
-                peakHoldTime[i] = current_timestamp();
+            int yPos = (COLS / 2) + i; 
+            barHeight = (int)map((int)barsR[i], 0, LINES, 15, 0);
+            if (barHeight <= peakHold[yPos]) {
+                peakHold[yPos] = barHeight;
+                peakHoldTime[yPos] = current_timestamp();
             }
-            if ((current_timestamp() - peakHoldTime[i]) > peakHoldTimeout) {
-                peakHold[i] = barHeight;
+            if ((current_timestamp() - peakHoldTime[yPos]) > peakHoldTimeout) {
+                peakHold[yPos] = peakHold[yPos] + 1;
+                peakHoldTime[yPos] = current_timestamp() - (long long)250;
             }
             for(int x = 0; x < 16; x++){
                 myPacket.pixel[x].y = (uint16_t)(COLS / 2) + i;
@@ -293,8 +295,8 @@ int main(int argc, char* argv[])
                     myPacket.pixel[x].g = 0;
                     myPacket.pixel[x].b = 0; 
                 }
-                if (x == peakHold[i]) {
-                    myPacket.pixel[x].r = 255;
+                if (x == peakHold[yPos]) {
+                    myPacket.pixel[x].r = 128;
                     myPacket.pixel[x].g = 0;
                     myPacket.pixel[x].b = 0;
                 }
